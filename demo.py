@@ -22,58 +22,8 @@ from third_party.DPT.run_monodepth import run_dpt
 
 
 def generate_mask_hints_from_user(args, config):
-    json_file = os.path.join(args.input_dir, 'image.json')
-    mask_file = os.path.join(args.input_dir, 'image_json', 'mask.png')
-
-    # mask
-    mask = imageio.imread(mask_file)
-    height, width = mask.shape[0], mask.shape[1]
-
-    # hints
-    hint_y = []
-    hint_x = []
-    hint_motion = []
-
-    data = json.load(open(json_file))
-    for shape in data['shapes']:
-        if shape['label'].startswith('hint'):
-            start, end = np.array(shape["points"])
-            hint_x.append(int(start[0]))
-            hint_y.append(int(start[1]))
-            hint_motion.append((end - start) / 50.)
-
-    hint_y = torch.tensor(hint_y)
-    hint_x = torch.tensor(hint_x)
-    hint_motion = torch.tensor(np.array(hint_motion)).permute(1, 0)[None]
-    max_hint = hint_motion.shape[-1]
-    xs = torch.linspace(0, width - 1, width)
-    ys = torch.linspace(0, height - 1, height)
-    xs = xs.view(1, 1, width).repeat(1, height, 1)
-    ys = ys.view(1, height, 1).repeat(1, 1, width)
-    xys = torch.cat((xs, ys), 1).view(2, -1)
-
-    dense_motion = torch.zeros(1, 2, height * width)
-    dense_motion_norm = torch.zeros(dense_motion.shape).view(1, 2, -1)
-
-    sigma = np.random.randint(height // (max_hint * 2), height // (max_hint / 2))
-    hint_y = hint_y.long()
-    hint_x = hint_x.long()
-    for i_hint in range(max_hint):
-        dist = ((xys - xys.view(2, height, width)[:, hint_y[i_hint], hint_x[i_hint]].unsqueeze(
-            1)) ** 2).sum(0, True).sqrt()
-        weight = (-(dist / sigma) ** 2).exp().unsqueeze(0)
-        dense_motion += weight * hint_motion[:, :, i_hint].unsqueeze(2)
-        dense_motion_norm += weight
-    dense_motion_norm[dense_motion_norm == 0.0] = 1.0
-    dense_motion = dense_motion / dense_motion_norm
-    dense_motion = dense_motion.view(1, 2, height, width) * torch.tensor(mask).bool()
-
-    hint = dense_motion
-    hint_scale = [config['W'] / width, config['W'] / height]
-    hint = hint * torch.FloatTensor(hint_scale).view(1, 2, 1, 1)
-    hint = F.interpolate(hint, (config['W'], config['W']), mode='bilinear', align_corners=False)
-    mask = F.interpolate(torch.tensor(mask[None, None]).bool().float(), (config['W'], config['W']), mode='area')
-
+    mask = torch.zeros((1, 1, 768, 768))
+    hint = torch.zeros((1, 2, 768, 768))
     return mask, hint
 
 
@@ -180,7 +130,7 @@ def render(args):
         Ts = [
             # define_camera_path(num_frames[0], 0., -0.08, 0., path_type='double-straight-line', return_t_only=True),
             # define_camera_path(num_frames[1], 0., 0., -0.24, path_type='straight-line', return_t_only=True),
-            define_camera_path(num_frames[2], -0.09, 0, -0, path_type='double-straight-line', return_t_only=True),
+            define_camera_path(num_frames[2], -0.15, 0, -0, path_type='double-straight-line', return_t_only=True),
             # define_camera_path(num_frames[3], -0.04, -0.04, -0.09, path_type='circle', return_t_only=True),
         ]
         crop = 32
