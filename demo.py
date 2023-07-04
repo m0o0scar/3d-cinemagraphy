@@ -175,12 +175,13 @@ def render(args):
         flow = flow / args.flow_scale
 
         num_frames = [60, 60, 60, 90]
-        video_paths = ['up-down', 'zoom-in', 'side', 'circle']
+        # video_paths = ['up-down', 'zoom-in', 'side', 'circle']
+        video_paths = ['side']
         Ts = [
-            define_camera_path(num_frames[0], 0., -0.08, 0., path_type='double-straight-line', return_t_only=True),
-            define_camera_path(num_frames[1], 0., 0., -0.24, path_type='straight-line', return_t_only=True),
+            # define_camera_path(num_frames[0], 0., -0.08, 0., path_type='double-straight-line', return_t_only=True),
+            # define_camera_path(num_frames[1], 0., 0., -0.24, path_type='straight-line', return_t_only=True),
             define_camera_path(num_frames[2], -0.09, 0, -0, path_type='double-straight-line', return_t_only=True),
-            define_camera_path(num_frames[3], -0.04, -0.04, -0.09, path_type='circle', return_t_only=True),
+            # define_camera_path(num_frames[3], -0.04, -0.04, -0.09, path_type='circle', return_t_only=True),
         ]
         crop = 32
         kernel = torch.ones(5, 5, device=device)
