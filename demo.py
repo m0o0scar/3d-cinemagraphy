@@ -54,8 +54,13 @@ def get_input_data(args, config, video_out_folder, ds_factor=1):
 
     h, w = src_img.shape[:2]
 
-    dpt_model_path = 'ckpts/dpt_hybrid-midas-501f0c75.pt'
-    run_dpt(input_path=args.input_dir, output_path=dpt_out_dir, model_path=dpt_model_path, optimize=False)
+    run_dpt(
+        input_path=args.input_dir,
+        output_path=dpt_out_dir,
+        model_path=args.dpt_model_path,
+        model_type=args.dpt_model_type,
+        optimize=False
+    )
     disp_file = os.path.join(dpt_out_dir, 'image.png')
 
     src_disp = imageio.imread(disp_file) / 65535.
@@ -124,14 +129,11 @@ def render(args):
             renderer.compute_flow_and_inpaint()
         flow = flow / args.flow_scale
 
-        num_frames = [60, 60, 60, 90]
+        num_frames = [args.n_frames]
         # video_paths = ['up-down', 'zoom-in', 'side', 'circle']
         video_paths = ['side']
         Ts = [
-            # define_camera_path(num_frames[0], 0., -0.08, 0., path_type='double-straight-line', return_t_only=True),
-            # define_camera_path(num_frames[1], 0., 0., -0.24, path_type='straight-line', return_t_only=True),
-            define_camera_path(num_frames[2], -0.15, 0, -0, path_type='double-straight-line', return_t_only=True),
-            # define_camera_path(num_frames[3], -0.04, -0.04, -0.09, path_type='circle', return_t_only=True),
+            define_camera_path(num_frames[0], -args.x_motion, 0, 0, path_type='double-straight-line', return_t_only=True),
         ]
         crop = 32
         kernel = torch.ones(5, 5, device=device)
@@ -221,6 +223,12 @@ if __name__ == '__main__':
                         help='do not load optimizer when reloading')
     parser.add_argument("--no_load_scheduler", action='store_true',
                         help='do not load scheduler when reloading')
+
+    parser.add_argument("--dpt_model_path", type=str, default='ckpts/dpt_beit_large_384.pt', help='specific depth estimation weights file to load')
+    parser.add_argument("--dpt_model_type", type=str, default='dpt_large', help='specific depth estimation model type')
+    parser.add_argument("--n_frames", type=int, default=60, help='number of frames to render')
+    parser.add_argument("--x_motion", type=float, default=0.20, help='x asix motion range')
+
     args = parser.parse_args()
 
     render(args)
